@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Image Upload</title>
+</head>
+<body>
+  <input type="file" id="imageUpload" accept="image/*">
+  <button onclick="uploadImage()">Upload</button>
+  <p id="uploadStatus"></p>
+
+  <script>
+    function uploadImage() {
+      const imageFile = document.getElementById("imageUpload").files[0];
+      const formData = new FormData();
+      formData.append("image", imageFile);
+
+      fetch("/image", {
+        method: "PUT",
+        body: formData
+      })
+      .then(response => {
+        if (response.ok) {
+          document.getElementById("uploadStatus").textContent = "Image uploaded successfully!";
+        } else {
+          throw new Error("Image upload failed.");
+        }
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        document.getElementById("uploadStatus").textContent = "Image upload failed.";
+      });
+    }
+  </script>
+</body>
+</html>
