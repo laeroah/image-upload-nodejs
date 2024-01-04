@@ -37,7 +37,8 @@ app.put('/image', async (req, res) => {
     const storage = new Storage();
     const bucketName = 'deepstream-experiments-comfyui'
     const bucket = storage.bucket(bucketName)
-    const blob = bucket.file(image.name); // Preserve original filename
+    const folder = 'user_images/'
+    const blob = bucket.file(folder + image.name); // Preserve original filename
     await blob.save(image.data);
     console.log('Image uploaded successfully to GCS:', blob.publicUrl());
   } catch (error) {
