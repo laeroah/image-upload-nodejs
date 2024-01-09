@@ -4,7 +4,7 @@ const contentTypeParser = require('content-type-parser');
 const fileType = require('file-type')
 
 const app = express();
-const port = 3000;
+const port = 8080;
 
 var bodyParser = require('body-parser')
 var bodyParser = require('body-parser');
