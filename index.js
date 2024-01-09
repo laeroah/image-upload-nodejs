@@ -1,6 +1,7 @@
 const express = require('express');
 const {Storage} = require('@google-cloud/storage');
 const contentTypeParser = require('content-type-parser');
+const fileType = require('file-type')
 
 const app = express();
 const port = 3000;
@@ -17,22 +18,20 @@ app.use(express.static('public'));
 app.get('/', (req, res) => {
   res.send('Server is heathy!!');
 });
-app.use('/image', (req, res, next) => {
+app.use('/image', async (req, res, next) => {
   if (req.method === 'PUT' && req.body.image) {
     const base64Data = req.body.image.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
 
     // Get file type and extension from base64 data
-    const contentType =
-        contentTypeParser(req.headers['x-goog-content-type-from-file']);
-    const contentTypeStr = contentType.toString();
+    const mimeInfo = await fileType.fromBuffer(buffer)
+    console.log(mimeInfo);
 
     // Validate file type
-    if (!contentTypeStr.startsWith('image/')) {
+    if (!mimeInfo.mime.startsWith('image/')) {
       return res.status(400).send({message: 'Invalid file type'});
     }
-    const fileExtension = contentTypeStr.split('/')[1];
-    const filename = Date.now() + "." + fileExtension;  // Generate a unique filename
+    const filename = Date.now() + "." + mimeInfo.ext;  // Generate a unique filename
     try {
       const storage = new Storage();
       const bucketName = 'deepstream-experiments-comfyui'
@@ -42,7 +41,7 @@ app.use('/image', (req, res, next) => {
           bucket.file(folder + filename);  // Preserve original filename
       blob.save(
           buffer, {
-            contentType: contentType,  // Use the content type from the file
+            contentType: mimeInfo.mime,  // Use the content type from the file
           },
           (err) => {
             if (err) {
