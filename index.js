@@ -1,56 +1,67 @@
 const express = require('express');
-const app = express();
-const fileUpload = require('express-fileupload');
 const {Storage} = require('@google-cloud/storage');
+const contentTypeParser = require('content-type-parser');
 
+const app = express();
+const port = 3000;
 
-app.use(
-  fileUpload({
-      limits: {
-          fileSize: 10000000,
-      },
-      abortOnLimit: true,
-  })
-);
+var bodyParser = require('body-parser')
+var bodyParser = require('body-parser');
+app.use(bodyParser.json({limit: '50mb'}));
+app.use(bodyParser.urlencoded({limit: '50mb', extended: true}))
 
+// Middleware to handle base64-encoded images
+app.use(express.json());  // Parse JSON request bodies
 // Add this line to serve our index.html page
 app.use(express.static('public'));
-
 app.get('/', (req, res) => {
-  res.send('Hello World!');
+  res.send('Server is heathy!!');
+});
+app.use('/image', (req, res, next) => {
+  if (req.method === 'PUT' && req.body.image) {
+    const base64Data = req.body.image.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Get file type and extension from base64 data
+    const contentType =
+        contentTypeParser(req.headers['x-goog-content-type-from-file']);
+    const contentTypeStr = contentType.toString();
+
+    // Validate file type
+    if (!contentTypeStr.startsWith('image/')) {
+      return res.status(400).send({message: 'Invalid file type'});
+    }
+    const fileExtension = contentTypeStr.split('/')[1];
+    const filename = Date.now() + "." + fileExtension;  // Generate a unique filename
+    try {
+      const storage = new Storage();
+      const bucketName = 'deepstream-experiments-comfyui'
+      const bucket = storage.bucket(bucketName)
+      const folder = 'user_images/'
+      const blob =
+          bucket.file(folder + filename);  // Preserve original filename
+      blob.save(
+          buffer, {
+            contentType: contentType,  // Use the content type from the file
+          },
+          (err) => {
+            if (err) {
+              return res.status(500).send({message: 'Error saving image'});
+            }
+            res.status(201).send(
+                {message: 'Image uploaded successfully', filename});
+          });
+      console.log('Image uploaded successfully to GCS:', blob.publicUrl());
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      res.status(500).send('Error uploading image');
+    }
+  } else {
+    next();  // Pass control to subsequent middleware if not a PUT request with
+             // image
+  }
 });
 
-app.put('/image', async (req, res) => {
-  // Get the file that was set to our field named "image"
-  const { image } = req.files;
-
-  // If no image submitted, exit
-  if (!image) {
-    console.log('no image selected!');
-    return res.sendStatus(400);
-  }
-
-  console.log(req.files);
-  // image.mv('uploads/' + image.name);
-
-  try {
-    const storage = new Storage();
-    const bucketName = 'deepstream-experiments-comfyui'
-    const bucket = storage.bucket(bucketName)
-    const folder = 'user_images/'
-    const blob = bucket.file(folder + image.name); // Preserve original filename
-    await blob.save(image.data);
-    console.log('Image uploaded successfully to GCS:', blob.publicUrl());
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    res.status(500).send('Error uploading image');
-  }
-
-  // All good
-  res.sendStatus(200);
-});
-
-const port = parseInt(process.env.PORT) || 8080;
 app.listen(port, () => {
-  console.log(`helloworld: listening on port ${port}`);
+  console.log(`Server listening on port ${port}`);
 });

@@ -1,35 +1,56 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<title>Image Upload</title>
+  <title>Image Upload</title>
 </head>
+
 <body>
-  <input type="file" id="imageUpload" accept="image/*">
-  <button onclick="uploadImage()">Upload</button>
-  <p id="uploadStatus"></p>
+  <input type="file" id="image-upload">
+  <button id="upload-button">Upload</button>
+  <div id="response"></div>
 
   <script>
-    function uploadImage() {
-      const imageFile = document.getElementById("imageUpload").files[0];
-      const formData = new FormData();
-      formData.append("image", imageFile);
+    const imageUpload = document.getElementById('image-upload');
+    const uploadButton = document.getElementById('upload-button');
+    const responseDiv = document.getElementById('response');
 
-      fetch("/image", {
-        method: "PUT",
-        body: formData
-      })
-      .then(response => {
-        if (response.ok) {
-          document.getElementById("uploadStatus").textContent = "Image uploaded successfully!";
-        } else {
-          throw new Error("Image upload failed.");
-        }
-      })
-      .catch(error => {
-        console.error("Error:", error);
-        document.getElementById("uploadStatus").textContent = "Image upload failed.";
-      });
-    }
+    uploadButton.addEventListener('click', () => {
+      const file = imageUpload.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64Data = event.target.result;
+          const data = { image: base64Data };
+
+          // Get the content type from the file
+          const contentType = file.type;
+          console.log(contentType);
+
+          fetch('/image', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-content-type-from-file': contentType // Add header for Google Cloud Storage
+            },
+            body: JSON.stringify(data)
+          })
+            .then(response => response.json())
+            .then(responseData => {
+              responseDiv.textContent = responseData.message;
+              console.log(responseData.filename);
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              responseDiv.textContent = 'Upload failed';
+            });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        responseDiv.textContent = 'Please select an image';
+      }
+    });
   </script>
 </body>
+
 </html>

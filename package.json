@@ -14,6 +14,8 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@google-cloud/storage": "^7.7.0",
+    "body-parser": "^1.20.2",
+    "content-type-parser": "^1.0.2",
     "express": "^4.17.1",
     "express-fileupload": "^1.4.3"
   }
