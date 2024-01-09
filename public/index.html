@@ -23,15 +23,10 @@
           const base64Data = event.target.result;
           const data = { image: base64Data };
 
-          // Get the content type from the file
-          const contentType = file.type;
-          console.log(contentType);
-
           fetch('/image', {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
-              'x-goog-content-type-from-file': contentType // Add header for Google Cloud Storage
             },
             body: JSON.stringify(data)
           })

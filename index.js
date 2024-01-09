@@ -31,7 +31,8 @@ app.use('/image', async (req, res, next) => {
     if (!mimeInfo.mime.startsWith('image/')) {
       return res.status(400).send({message: 'Invalid file type'});
     }
-    const filename = Date.now() + "." + mimeInfo.ext;  // Generate a unique filename
+    const filename =
+        Date.now() + '.' + mimeInfo.ext;  // Generate a unique filename
     try {
       const storage = new Storage();
       const bucketName = 'deepstream-experiments-comfyui'
@@ -47,8 +48,18 @@ app.use('/image', async (req, res, next) => {
             if (err) {
               return res.status(500).send({message: 'Error saving image'});
             }
-            res.status(201).send(
-                {message: 'Image uploaded successfully', filename});
+            const expires = Date.now() + 3600000;  // Expires in 1 hour
+            const url =
+                `https://storage.googleapis.com/${bucketName}/${filename}`;
+            const signedUrl = storage.signUrl(url, {
+              action: 'read',
+              expires: expires,
+            });
+            res.status(201).send({
+              message: 'Image uploaded successfully',
+              filename,
+              downloadUrl: signedUrl
+            });
           });
       console.log('Image uploaded successfully to GCS:', blob.publicUrl());
     } catch (error) {
