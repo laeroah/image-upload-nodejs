@@ -76,20 +76,19 @@ app.use('/image', async (req, res, next) => {
             //   action: 'read',
             //   expires: expires,
             // });
-            const signedUrl =
-                generateSignedUrl(fullFileName)
-                    .then(() => {
-                      res.status(201).send({
-                        message: 'Image uploaded successfully',
-                        filename,
-                        downloadUrl: signedUrl
-                      });
-                    })
-                    .catch(error => {
-                      console.error('Error uploading image:', error);
-                      return res.status(500).send(
-                          {message: 'Error saving image: ' + error});
-                    });
+            generateSignedUrl(fullFileName)
+                .then(signedUrl => {
+                  res.status(201).send({
+                    message: 'Image uploaded successfully',
+                    filename,
+                    downloadUrl: signedUrl
+                  });
+                })
+                .catch(error => {
+                  console.error('Error uploading image:', error);
+                  return res.status(500).send(
+                      {message: 'Error saving image: ' + error});
+                });
           });
     } catch (error) {
       console.error('Error uploading image:', error);
