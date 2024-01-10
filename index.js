@@ -46,7 +46,8 @@ app.use('/image', async (req, res, next) => {
           },
           (err) => {
             if (err) {
-              return res.status(500).send({message: 'Error saving image'});
+              return res.status(500).send(
+                  {message: 'Error saving image: ' + err});
             }
             const expires = Date.now() + 3600000;  // Expires in 1 hour
             const url =
