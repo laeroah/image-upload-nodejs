@@ -24,7 +24,7 @@ app.get('/', (req, res) => {
   res.send('Server is heathy!!');
 });
 
-const generateSignedUrl = async (fileName) => {
+const generateSignedUrl = (fileName) => {
   // These options will allow temporary read access to the file
   const options = {
     version: 'v2',  // defaults to 'v2' if missing.
@@ -33,8 +33,7 @@ const generateSignedUrl = async (fileName) => {
   };
 
   // Get a v2 signed URL for the file
-  const [url] =
-      await storage.bucket(bucketName).file(fileName).getSignedUrl(options);
+  const [url] = storage.bucket(bucketName).file(fileName).getSignedUrl(options);
 
   console.log(`The signed url for ${fileName} is ${url}.`);
 
@@ -76,19 +75,12 @@ app.use('/image', async (req, res, next) => {
             //   action: 'read',
             //   expires: expires,
             // });
-            generateSignedUrl(fullFileName)
-                .then(signedUrl => {
-                  res.status(201).send({
-                    message: 'Image uploaded successfully',
-                    filename,
-                    downloadUrl: signedUrl
-                  });
-                })
-                .catch(error => {
-                  console.error('Error uploading image:', error);
-                  return res.status(500).send(
-                      {message: 'Error saving image: ' + error});
-                });
+            const signedUrl = generateSignedUrl(fullFileName);
+            res.status(201).send({
+              message: 'Image uploaded successfully',
+              filename,
+              downloadUrl: signedUrl
+            });
           });
     } catch (error) {
       console.error('Error uploading image:', error);
