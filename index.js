@@ -78,16 +78,15 @@ app.use('/image', async (req, res, next) => {
             //   action: 'read',
             //   expires: expires,
             // });
-            generateSignedUrl()
-            .then(signedUrl => {
-              res.status(201).send({
-                message: 'Image uploaded successfully',
-                filename,
-                downloadUrl: signedUrl
-              });
-            })
-            .catch(error => {
+            const signedUrl = generateSignedUrl().catch(error => {
               console.error('Error uploading image:', error);
+              return res.status(500).send(
+                  {message: 'Error saving image: ' + error});
+            });
+            res.status(201).send({
+              message: 'Image uploaded successfully',
+              filename,
+              downloadUrl: signedUrl
             });
           });
       console.log('Image uploaded successfully to GCS:', blob.publicUrl());
