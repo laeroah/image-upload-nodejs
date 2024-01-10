@@ -15,9 +15,34 @@ app.use(bodyParser.urlencoded({limit: '50mb', extended: true}))
 app.use(express.json());  // Parse JSON request bodies
 // Add this line to serve our index.html page
 app.use(express.static('public'));
+
+const storage = new Storage();
+const bucketName = 'deepstream-experiments-comfyui'
+const bucket = storage.bucket(bucketName)
+
 app.get('/', (req, res) => {
   res.send('Server is heathy!!');
 });
+
+const generateSignedUrl = async(fileName) => {
+  // These options will allow temporary read access to the file
+  const options = {
+    version: 'v2', // defaults to 'v2' if missing.
+    action: 'read',
+    expires: Date.now() + 1000 * 60 * 60, // one hour
+  };
+
+  // Get a v2 signed URL for the file
+  const [url] = await storage
+    .bucket(bucketName)
+    .file(fileName)
+    .getSignedUrl(options);
+
+  console.log(`The signed url for ${fileName} is ${url}.`);
+
+  return url;
+}
+
 app.use('/image', async (req, res, next) => {
   if (req.method === 'PUT' && req.body.image) {
     const base64Data = req.body.image.replace(/^data:image\/\w+;base64,/, '');
@@ -34,9 +59,6 @@ app.use('/image', async (req, res, next) => {
     const filename =
         Date.now() + '.' + mimeInfo.ext;  // Generate a unique filename
     try {
-      const storage = new Storage();
-      const bucketName = 'deepstream-experiments-comfyui'
-      const bucket = storage.bucket(bucketName)
       const folder = 'user_images/'
       const blob =
           bucket.file(folder + filename);  // Preserve original filename
@@ -49,17 +71,23 @@ app.use('/image', async (req, res, next) => {
               return res.status(500).send(
                   {message: 'Error saving image: ' + err});
             }
-            const expires = Date.now() + 3600000;  // Expires in 1 hour
-            const url =
-                `https://storage.googleapis.com/${bucketName}/${filename}`;
-            const signedUrl = storage.signUrl(url, {
-              action: 'read',
-              expires: expires,
-            });
-            res.status(201).send({
-              message: 'Image uploaded successfully',
-              filename,
-              downloadUrl: signedUrl
+            // const expires = Date.now() + 3600000;  // Expires in 1 hour
+            // const url =
+            //     `https://storage.googleapis.com/${bucketName}/${filename}`;
+            // const signedUrl = storage.signUrl(url, {
+            //   action: 'read',
+            //   expires: expires,
+            // });
+            generateSignedUrl()
+            .then(signedUrl => {
+              res.status(201).send({
+                message: 'Image uploaded successfully',
+                filename,
+                downloadUrl: signedUrl
+              });
+            })
+            .catch(error => {
+              console.error('Error uploading image:', error);
             });
           });
       console.log('Image uploaded successfully to GCS:', blob.publicUrl());
