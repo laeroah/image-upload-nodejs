@@ -60,8 +60,9 @@ app.use('/image', async (req, res, next) => {
         Date.now() + '.' + mimeInfo.ext;  // Generate a unique filename
     try {
       const folder = 'user_images/'
+      const fullFileName = folder + filename;
       const blob =
-          bucket.file(folder + filename);  // Preserve original filename
+          bucket.file(fullFileName);  // Preserve original filename
       blob.save(
           buffer, {
             contentType: mimeInfo.mime,  // Use the content type from the file
@@ -78,7 +79,9 @@ app.use('/image', async (req, res, next) => {
             //   action: 'read',
             //   expires: expires,
             // });
-            const signedUrl = generateSignedUrl(filename).catch(error => {
+            const signedUrl = generateSignedUrl(fullFileName)
+            .then()
+            .catch(error => {
               console.error('Error uploading image:', error);
               return res.status(500).send(
                   {message: 'Error saving image: ' + error});
