@@ -100,6 +100,50 @@ app.use('/image', async (req, res, next) => {
   }
 });
 
+
+// curl -X POST -H "Content-Type: application/json" --data '{"fileURL":"", "destinationPath": "comfyui/output/image"}' http://0.0.0.0:8080/file_url_upload_to_gcs
+app.post('/file_url_upload_to_gcs', async (req, res) => {
+  try {
+    const fileURL = req.body.fileURL;
+    const destinationPath = req.body.destFullFilePath;
+
+    // Fetch the file from the provided URL
+    const response = await fetch(fileURL);
+
+    if (!response.ok) {
+      throw new Error(`Error fetching file: ${response.status}`);
+    }
+
+    // Get a ReadableStream from the response
+    const contentType = response.headers.get('content-type');
+    const extension = mime.getExtension(contentType);
+    const readableStream = response.body;
+    const destFullFilePath = `${destinationPath}/${Date.now()}.${extension}`;
+
+    const bucket = storage.bucket(bucketName);
+    const fileStream = bucket.file(destFullFilePath).createWriteStream({
+      metadata: {
+        contentType: contentType, // Use the detected MIME type
+      },
+    });
+
+    readableStream.pipe(fileStream); // Pipe data to Cloud Storage
+
+    await new Promise((resolve, reject) => {
+      fileStream.on('error', reject);
+      fileStream.on('finish', resolve);
+    });
+
+    const signedUrl = generateSignedUrl(destFullFilePath);
+    console.log(`File saved to Google Cloud Storage: ${signedUrl}`);
+
+    res.status(200).json({ success: true, signedUrl });
+  } catch (error) {
+    console.error('Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
