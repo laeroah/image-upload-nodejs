@@ -2,7 +2,7 @@ const express = require('express');
 const {Storage} = require('@google-cloud/storage');
 const contentTypeParser = require('content-type-parser');
 const fileType = require('file-type');
-const mime = require('mime');
+const mimeTypes = require('mime-types');
 
 
 const app = express();
@@ -118,7 +118,7 @@ app.post('/file_url_upload_to_gcs', async (req, res) => {
 
     // Get a ReadableStream from the response
     const contentType = response.headers.get('content-type');
-    const extension = mime.getExtension(contentType);
+    const extension = mimeTypes.getExtension(contentType);
     const readableStream = response.body;
     const destFullFilePath = `${destinationPath}/${Date.now()}.${extension}`;
 
