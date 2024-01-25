@@ -1,7 +1,9 @@
 const express = require('express');
 const {Storage} = require('@google-cloud/storage');
 const contentTypeParser = require('content-type-parser');
-const fileType = require('file-type')
+const fileType = require('file-type');
+const mime = require('mime');
+
 
 const app = express();
 const port = 8080;
