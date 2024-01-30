@@ -2,7 +2,7 @@ const express = require('express');
 const {Storage} = require('@google-cloud/storage');
 const multer = require('multer');
 const fileType = require('file-type');
-const cors = require('cors'); // Import the cors middleware ////// to be removed when enaling on server
+//const cors = require('cors'); // Import the cors middleware ////// to be removed when enaling on server
 
 const app = express();
 const port = 8085;
@@ -12,7 +12,7 @@ var bodyParser = require('body-parser');
 app.use(bodyParser.json({limit: '50mb'}));
 app.use(bodyParser.urlencoded({limit: '50mb', extended: true}))
 
-app.use(cors()); // Enable CORS for all routes //////// to be removed when enabling on server
+//app.use(cors()); // Enable CORS for all routes //////// to be removed when enabling on server
 
 
 // Middleware to handle base64-encoded images
