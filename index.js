@@ -5,7 +5,7 @@ const fileType = require('file-type');
 //const cors = require('cors'); // Import the cors middleware ////// to be removed when enaling on server
 
 const app = express();
-const port = 8085;
+const port = 8080;
 
 var bodyParser = require('body-parser')
 var bodyParser = require('body-parser');
