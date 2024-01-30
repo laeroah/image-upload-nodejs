@@ -1,17 +1,19 @@
 const express = require('express');
 const {Storage} = require('@google-cloud/storage');
-const contentTypeParser = require('content-type-parser');
+const multer = require('multer');
 const fileType = require('file-type');
-const mimeTypes = require('mime-types');
-
+const cors = require('cors'); // Import the cors middleware ////// to be removed when enaling on server
 
 const app = express();
-const port = 8080;
+const port = 8085;
 
 var bodyParser = require('body-parser')
 var bodyParser = require('body-parser');
 app.use(bodyParser.json({limit: '50mb'}));
 app.use(bodyParser.urlencoded({limit: '50mb', extended: true}))
+
+app.use(cors()); // Enable CORS for all routes //////// to be removed when enabling on server
+
 
 // Middleware to handle base64-encoded images
 app.use(express.json());  // Parse JSON request bodies
@@ -71,13 +73,6 @@ app.use('/image', async (req, res, next) => {
               return res.status(500).send(
                   {message: 'Error saving image: ' + err});
             }
-            // const expires = Date.now() + 3600000;  // Expires in 1 hour
-            // const url =
-            //     `https://storage.googleapis.com/${bucketName}/${filename}`;
-            // const signedUrl = storage.signUrl(url, {
-            //   action: 'read',
-            //   expires: expires,
-            // });
             generateSignedUrl(fullFileName)
                 .then(signedUrl => {
                   res.status(201).send({
@@ -102,48 +97,61 @@ app.use('/image', async (req, res, next) => {
   }
 });
 
+const handleImageUpload = async (buffer, res) => {
+  // Get file type and extension from the image data
+  const mimeInfo = await fileType.fromBuffer(buffer);
 
-// curl -X POST -H "Content-Type: application/json" --data '{"fileURL":"", "destinationPath": "comfyui/output/image"}' http://0.0.0.0:8080/file_url_upload_to_gcs
-app.post('/file_url_upload_to_gcs', async (req, res) => {
-  try {
-    const fileURL = req.body.fileURL;
-    const destinationPath = req.body.destFullFilePath;
-
-    // Fetch the file from the provided URL
-    const response = await fetch(fileURL);
-
-    if (!response.ok) {
-      throw new Error(`Error fetching file: ${response.status}`);
-    }
-
-    // Get a ReadableStream from the response
-    const contentType = response.headers.get('content-type');
-    const extension = mimeTypes.getExtension(contentType);
-    const readableStream = response.body;
-    const destFullFilePath = `${destinationPath}/${Date.now()}.${extension}`;
-
-    const bucket = storage.bucket(bucketName);
-    const fileStream = bucket.file(destFullFilePath).createWriteStream({
-      metadata: {
-        contentType: contentType, // Use the detected MIME type
-      },
-    });
-
-    readableStream.pipe(fileStream); // Pipe data to Cloud Storage
-
-    await new Promise((resolve, reject) => {
-      fileStream.on('error', reject);
-      fileStream.on('finish', resolve);
-    });
-
-    const signedUrl = generateSignedUrl(destFullFilePath);
-    console.log(`File saved to Google Cloud Storage: ${signedUrl}`);
-
-    res.status(200).json({ success: true, signedUrl });
-  } catch (error) {
-    console.error('Error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
+  // Validate file type
+  if (!mimeInfo || !mimeInfo.mime.startsWith('image/')) {
+    return res.status(400).send({ message: 'Invalid file type' });
   }
+
+  const filename = Date.now() + '.' + mimeInfo.ext; // Generate a unique filename
+  const folder = 'user_images/';
+  const fullFileName = folder + filename;
+
+  try {
+    const blob = bucket.file(fullFileName);
+    blob.save(
+      buffer,
+      {
+        contentType: mimeInfo.mime,
+      },
+      (err) => {
+        if (err) {
+          return res.status(500).send({ message: 'Error saving image: ' + err });
+        }
+        generateSignedUrl(fullFileName)
+          .then((signedUrl) => {
+            res.status(201).send({
+              message: 'Image uploaded successfully',
+              filename,
+              downloadUrl: signedUrl,
+            });
+          })
+          .catch((error) => {
+            console.error('Error uploading image:', error);
+            return res.status(500).send({ message: 'Error saving image: ' + error });
+          });
+      }
+    );
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    res.status(500).send('Error uploading image');
+  }
+};
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.put('/file_upload_to_gcs', upload.single('fileInput'), async (req, res) => {
+  const uploadedFile = req.file.buffer;
+
+  if (!uploadedFile) {
+    res.status(400).json({ error: 'No file uploaded' });
+    return;
+  }
+
+  handleImageUpload(uploadedFile, res);
 });
 
 app.listen(port, () => {
